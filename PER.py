@@ -1,4 +1,6 @@
 import numpy as np
+import torch
+
 
 # SumTree
 # a binary tree data structure where the parent’s value is the sum of its children
@@ -81,13 +83,13 @@ class PER:
 
         """
         :param size: Size of the replay buffer, must be a power of 2 (typically 2^20 is used)
-        :param device: When sampling, the buffer will move the tensors onto your preferred device
+        :param device: When sampling, the buffer will move the tensors onto your preferred device. Should be a torch device
         :param n: N-Step reinforcement learning. This buffer handles N-step for you
         :param envs: number of parallel environments
         :param gamma: your discount rate
         :param alpha: prioritization rate
         :param beta: Importance sampling bias annealing
-        :param total_steps: Used to know how quickly to anneal beta towards 1
+        :param total_steps: Used to know how quickly to anneal beta towards 1. This is in steps, not frames
         :param framestack: Framestack of your environment (typically 4)
         :param imagex: (typically 84)
         :param imagey: (typically 84)
@@ -102,6 +104,7 @@ class PER:
         self.data = [None for _ in range(size)]
         self.index = 0
         self.size = size
+        self.rgb = rgb
 
         # this is the number of frames, not the number of transitions
         # the technical size to ensure there are no errors with overwritten memory in theory is very high-
@@ -112,6 +115,9 @@ class PER:
         print("Thank you for using Prioritized Experience Replay")
         print("Please note, if you are using very short short episodes (average length < 20),"
               " you will need to increase data_store_mult")
+
+        # if your episodes are very short, use data_store_mult=framestack to be sure to prevent errors,
+        # but will cost more RAM
 
         if rgb:
             self.storage_size = int(size * 4)
@@ -527,3 +533,6 @@ class PER:
 
         self.max_prio = max(self.max_prio, np.max(priorities))
         self.st.update(self.last_idxs, priorities ** self.alpha)
+
+if __name__ == "__main__":
+    per = PER(2**20, torch.device("cuda:0"), 3, 8, 0.99)
